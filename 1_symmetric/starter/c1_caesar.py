@@ -28,6 +28,7 @@ import os
 
 def caesar_encrypt(text: str, shift: int) -> str:
     """TODO C1: shift every letter by `shift` (mod 26)."""
+    print("text:", text)
     raise NotImplementedError("C1: caesar_encrypt")
 
 
