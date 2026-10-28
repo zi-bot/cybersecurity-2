@@ -15,76 +15,126 @@ Expected output:
     tampered ciphertext rejected: InvalidTag
 """
 
+
+#!/usr/bin/env python3
+
 from __future__ import annotations
 
 import os
 import tempfile
 
 from cryptography.exceptions import InvalidTag
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM  # noqa: F401  (you will use it)
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 NONCE_SIZE = 12
 TAG_SIZE = 16
 
 
 def create_key() -> bytes:
-    """TODO S1: a random AES-256 key (32 bytes). Hint: AESGCM.generate_key."""
-    raise NotImplementedError("S1: create_key")
+    """Membuat kunci AES-256 acak."""
+    return AESGCM.generate_key(bit_length=256)
 
 
 def save_key(key: bytes, path: str) -> None:
-    """TODO S1: write the key to `path` with permissions 0600 (os.open with a mode)."""
-    raise NotImplementedError("S1: save_key")
+    """Menyimpan kunci dengan izin akses terbatas."""
+    if len(key) != 32:
+        raise ValueError("Kunci AES-256 harus 32 byte")
+
+    directory = os.path.dirname(os.path.abspath(path))
+    os.makedirs(directory, exist_ok=True)
+
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(key)
+    except Exception:
+        raise
 
 
 def load_key(path: str) -> bytes:
-    """TODO S1: read the key; reject (ValueError) if its length is not 32 bytes."""
-    raise NotImplementedError("S1: load_key")
+    """Membaca kunci dan memeriksa panjangnya."""
+    with open(path, "rb") as f:
+        key = f.read()
+
+    if len(key) != 32:
+        raise ValueError("Panjang kunci tidak valid")
+
+    return key
 
 
 def encrypt_data(key: bytes, data: bytes) -> bytes:
-    """TODO S1: a NEW random 12-byte nonce for every message; return nonce + ct."""
-    raise NotImplementedError("S1: encrypt_data")
+    """Mengenkripsi data menggunakan AES-GCM."""
+    nonce = os.urandom(NONCE_SIZE)
+    ciphertext = AESGCM(key).encrypt(nonce, data, None)
+    return nonce + ciphertext
 
 
 def decrypt_data(key: bytes, package: bytes) -> bytes:
-    """TODO S1/S2: split nonce and ct; ValueError if the package is < 28 bytes;
-    let InvalidTag surface if the data was changed or the key is wrong."""
-    raise NotImplementedError("S2: decrypt_data")
+    """Mendekripsi data dan memeriksa keasliannya."""
+    if len(package) < NONCE_SIZE + TAG_SIZE:
+        raise ValueError("Paket terenkripsi terlalu pendek")
+
+    nonce = package[:NONCE_SIZE]
+    ciphertext = package[NONCE_SIZE:]
+    return AESGCM(key).decrypt(nonce, ciphertext, None)
 
 
 def encrypt_file(key: bytes, src: str, dst: str) -> None:
-    """TODO S1: read `src`, write the encrypted result to `dst`."""
-    raise NotImplementedError("S1: encrypt_file")
+    """Mengenkripsi file sumber ke file tujuan."""
+    with open(src, "rb") as f:
+        data = f.read()
+
+    encrypted = encrypt_data(key, data)
+
+    with open(dst, "wb") as f:
+        f.write(encrypted)
 
 
 def decrypt_file(key: bytes, src: str, dst: str) -> None:
-    """TODO S1: write `dst` ONLY if decryption succeeds."""
-    raise NotImplementedError("S1: decrypt_file")
+    """Menyimpan hasil dekripsi hanya jika autentikasi berhasil."""
+    with open(src, "rb") as f:
+        package = f.read()
+
+    data = decrypt_data(key, package)
+
+    with open(dst, "wb") as f:
+        f.write(data)
 
 
 def main() -> int:
     key = create_key()
+
     with tempfile.TemporaryDirectory() as d:
-        orig, enc, dec = (os.path.join(d, n) for n in ("a.txt", "a.enc", "a.out"))
+        orig, enc, dec = (
+            os.path.join(d, n) for n in ("a.txt", "a.enc", "a.out")
+        )
+
         with open(orig, "wb") as f:
             f.write(b"ORDER-0000001 | dummy data")
+
         encrypt_file(key, orig, enc)
         decrypt_file(key, enc, dec)
+
         with open(orig, "rb") as a, open(dec, "rb") as b:
             print("round-trip:", a.read() == b.read())
+
         with open(enc, "rb") as f:
             broken = bytearray(f.read())
-        broken[NONCE_SIZE] ^= 1  # S2: flip one bit
+
+        broken[NONCE_SIZE] ^= 1
+
         with open(enc, "wb") as f:
             f.write(broken)
+
         try:
             decrypt_file(key, enc, dec)
             print("tampered ciphertext rejected: NO  <-- something is wrong")
         except InvalidTag:
             print("tampered ciphertext rejected: InvalidTag")
+
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

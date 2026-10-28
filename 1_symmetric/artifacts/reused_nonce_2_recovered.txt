@@ -1,0 +1,1 @@
+REPORT|2026-03-03|status=SHIPPED___|amount=07850000|warehouse=B

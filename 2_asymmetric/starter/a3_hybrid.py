@@ -19,26 +19,72 @@ from __future__ import annotations
 
 import os
 
-from cryptography.hazmat.primitives import hashes  # noqa: F401
-from cryptography.hazmat.primitives.asymmetric import padding, rsa  # noqa: F401
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM  # noqa: F401
+from cryptography.exceptions import InvalidTag
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 
-def hybrid_encrypt(data: bytes, pub) -> bytes:
-    """TODO A3: build the package in the format above."""
-    raise NotImplementedError("A3: hybrid_encrypt")
+OAEP = padding.OAEP(
+    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+    algorithm=hashes.SHA256(),
+    label=None,
+)
 
 
-def hybrid_decrypt(package: bytes, priv) -> bytes:
-    """TODO A3: parse the package, checking lengths BEFORE slicing."""
-    raise NotImplementedError("A3: hybrid_decrypt")
+def hybrid_encrypt(data: bytes, public_key) -> bytes:
+    """Enkripsi data dengan AES-GCM dan bungkus kunci AES memakai RSA-OAEP."""
+    aes_key = AESGCM.generate_key(bit_length=256)
+    nonce = os.urandom(12)
+
+    ciphertext = AESGCM(aes_key).encrypt(nonce, data, None)
+    wrapped_key = public_key.encrypt(aes_key, OAEP)
+
+    header = len(wrapped_key).to_bytes(2, "big")
+    return header + wrapped_key + nonce + ciphertext
+
+
+def hybrid_decrypt(package: bytes, private_key) -> bytes:
+    """Periksa paket, buka kunci AES, lalu dekripsi data."""
+    if len(package) < 2:
+        raise ValueError("Package too short")
+
+    wrapped_length = int.from_bytes(package[:2], "big")
+
+    if wrapped_length == 0:
+        raise ValueError("Invalid wrapped key length")
+
+    minimum_length = 2 + wrapped_length + 12 + 16
+    if len(package) < minimum_length:
+        raise ValueError("Package too short")
+
+    start = 2
+    end = start + wrapped_length
+
+    wrapped_key = package[start:end]
+    nonce = package[end:end + 12]
+    ciphertext = package[end + 12:]
+
+    try:
+        aes_key = private_key.decrypt(wrapped_key, OAEP)
+    except ValueError as exc:
+        raise ValueError("Unable to unwrap AES key") from exc
+
+    return AESGCM(aes_key).decrypt(nonce, ciphertext, None)
 
 
 def main() -> int:
-    priv = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+    )
+    public_key = private_key.public_key()
+
     data = os.urandom(10_000)
-    package = hybrid_encrypt(data, priv.public_key())
-    print(f"{len(data)} bytes: round-trip", hybrid_decrypt(package, priv) == data)
+    package = hybrid_encrypt(data, public_key)
+    decrypted = hybrid_decrypt(package, private_key)
+
+    print(f"10000 bytes: round-trip {decrypted == data}")
     return 0
 
 

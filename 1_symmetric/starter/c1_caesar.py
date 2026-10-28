@@ -24,21 +24,32 @@ Expected output once finished (python3 1_symmetric/starter/c1_caesar.py):
 from __future__ import annotations
 
 import os
-
-
+    
 def caesar_encrypt(text: str, shift: int) -> str:
-    """TODO C1: shift every letter by `shift` (mod 26)."""
-    raise NotImplementedError("C1: caesar_encrypt")
+    shift = shift % 26
+    result = ""
+
+    for char in text:
+        if "A" <= char <= "Z":
+            result += chr((ord(char) - ord("A") + shift) % 26 + ord("A"))
+        elif "a" <= char <= "z":
+            result += chr((ord(char) - ord("a") + shift) % 26 + ord("a"))
+        else:
+            result += char
+
+    return result
 
 
 def caesar_decrypt(text: str, shift: int) -> str:
-    """TODO C1: the inverse of caesar_encrypt."""
-    raise NotImplementedError("C1: caesar_decrypt")
+    return caesar_encrypt(text, -shift)
 
 
 def brute_force(ciphertext: str) -> list[tuple[int, str]]:
-    """TODO C2: [(1, decrypted_with_shift_1), ..., (25, decrypted_with_shift_25)]."""
-    raise NotImplementedError("C2: brute_force")
+    candidates = []
+    for shift in range(1, 26):
+        decrypted_text = caesar_decrypt(ciphertext, shift)
+        candidates.append((shift, decrypted_text))
+    return candidates
 
 
 def main() -> int:

@@ -10,23 +10,40 @@ Expected output once finished:
 
 from __future__ import annotations
 
-from cryptography.hazmat.primitives import hashes  # noqa: F401
-from cryptography.hazmat.primitives.asymmetric import padding, rsa  # noqa: F401
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 
 def generate_key():
-    """TODO A1: an RSA private key, 2048 bits, public exponent 65537."""
-    raise NotImplementedError("A1: generate_key")
+    """Generate an RSA private key."""
+    return rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048
+    )
 
 
 def encrypt_oaep(pub, message: bytes) -> bytes:
-    """TODO A1: encrypt with padding.OAEP(...)."""
-    raise NotImplementedError("A1: encrypt_oaep")
+    """Encrypt using RSA-OAEP with SHA-256."""
+    return pub.encrypt(
+        message,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
 
 
 def decrypt_oaep(priv, ciphertext: bytes) -> bytes:
-    """TODO A1: decrypt with the same OAEP."""
-    raise NotImplementedError("A1: decrypt_oaep")
+    """Decrypt using RSA-OAEP with SHA-256."""
+    return priv.decrypt(
+        ciphertext,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
 
 
 def main() -> int:

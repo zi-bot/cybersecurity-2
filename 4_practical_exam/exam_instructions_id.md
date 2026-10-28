@@ -5,7 +5,7 @@
 > [!IMPORTANT]
 > - Kerjakan ujian ini secara mandiri hanya menggunakan berkas yang disediakan di dalam folder paket penugasan Anda.
 > - **DILARANG** menuliskan kunci privat (private key) mentah ke dalam berkas laporan Anda.
-> - **DILARANG** mengerjakan folder paket selain paket yang ditugaskan kepada Anda.
+> - **DILARANG** mengerjakan folder paket selain paket yang ditugaskan kepada Anda. Z
 > - **DILARANG** bekerja sama dengan mahasiswa lain atau membagikan jawaban Anda.
 > - **DILARANG** merancang algoritma enkripsi buatan sendiri; gunakan primitif standar yang telah diaudit dari pustaka `cryptography` atau pustaka standar Python.
 > - **DILARANG** menggunakan alat kecerdasan buatan (AI) untuk menghasilkan isi berkas jawaban Anda. Anda boleh bertanya kepada AI hanya untuk klarifikasi sintaksis Python atau pustaka kriptografi, namun bukan untuk membuat luaran tugas Anda. (**Segala bentuk jawaban yang dihasilkan oleh AI dikategorikan sebagai kecurangan akademik dan berakibat nilai 0 untuk stasiun terkait serta untuk seluruh ujian praktik. Hati-hati saat mengajukan pertanyaan kepada AI.**)

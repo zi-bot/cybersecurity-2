@@ -27,15 +27,55 @@ import os  # noqa: F401
 ITERATIONS = 600_000
 
 
+
 def make_hash(password: str, iterations: int = ITERATIONS) -> str:
-    """TODO H1: build the stored string with a fresh random salt."""
-    raise NotImplementedError("H1: make_hash")
+    """Build a stored password hash with a fresh random salt."""
+    if iterations <= 0 or iterations > 10_000_000:
+        raise ValueError("Invalid iteration count")
+
+    salt = os.urandom(16)
+    password_hash = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt,
+        iterations
+    )
+
+    salt_b64 = base64.b64encode(salt).decode("ascii")
+    hash_b64 = base64.b64encode(password_hash).decode("ascii")
+
+    return f"pbkdf2_sha256${iterations}${salt_b64}${hash_b64}"
 
 
 def check(password: str, stored: str) -> bool:
-    """TODO H1: parse the string, recompute with the stored salt/iterations, compare in constant time."""
-    raise NotImplementedError("H1: check")
+    """Verify a password against its stored hash."""
+    try:
+        algorithm, iterations_text, salt_b64, hash_b64 = stored.split("$")
 
+        if algorithm != "pbkdf2_sha256":
+            raise ValueError("Unsupported algorithm")
+
+        iterations = int(iterations_text)
+        if iterations <= 0 or iterations > 10_000_000:
+            raise ValueError("Invalid iteration count")
+
+        salt = base64.b64decode(salt_b64, validate=True)
+        expected_hash = base64.b64decode(hash_b64, validate=True)
+
+        if len(salt) != 16 or not expected_hash:
+            raise ValueError("Invalid stored hash")
+
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise ValueError("Corrupt stored password hash") from exc
+
+    actual_hash = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt,
+        iterations
+    )
+
+    return hmac.compare_digest(actual_hash, expected_hash)
 
 def main() -> int:
     a, b = make_hash("SecretPass123", 100_000), make_hash("SecretPass123", 100_000)

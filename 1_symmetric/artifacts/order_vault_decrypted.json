@@ -1,0 +1,24 @@
+{
+  "unit": "B2B Order Operations",
+  "note": "Dummy data for Practical 2 — not real customer data.",
+  "orders": [
+    {
+      "no": "ORDER-0000001",
+      "customer": "PT Contoh Niaga",
+      "status": "PROCESSING",
+      "amount": 12500000
+    },
+    {
+      "no": "ORDER-0000002",
+      "customer": "CV Mitra Contoh",
+      "status": "PENDING",
+      "amount": 4300000
+    },
+    {
+      "no": "ORDER-0000003",
+      "customer": "Koperasi Contoh",
+      "status": "SHIPPED",
+      "amount": 7850000
+    }
+  ]
+}
