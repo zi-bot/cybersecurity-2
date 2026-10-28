@@ -6,58 +6,87 @@ Provided by the instructor. Find its weakness, prove it, then fix it.
 
 from __future__ import annotations
 
+import os
+import secrets
 import sys
+
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-_PART_1 = bytes.fromhex("f471e39a2f8d9dce4500ce1b0ca043bd58616833b3d582a936eed38e48a0ef26")
-_PART_2 = bytes.fromhex("cbce16655f0846544eb644d17d0fd92d1e3359f6fab6395dc1770028d3d9d406")
-_NONCE = bytes.fromhex("517c9f358e4498a315fae7b7")
+NONCE_SIZE = 12
 
 
 def _key() -> bytes:
-    return bytes(a ^ b for a, b in zip(_PART_1, _PART_2))
+    """Ambil kunci AES-256 dari environment variable."""
+    key_hex = os.environ.get("REPORT_KEY")
+
+    if not key_hex:
+        raise ValueError("REPORT_KEY belum diatur.")
+
+    try:
+        key = bytes.fromhex(key_hex)
+    except ValueError as exc:
+        raise ValueError("Format REPORT_KEY tidak valid.") from exc
+
+    if len(key) != 32:
+        raise ValueError("Kunci harus berukuran 32 byte (64 karakter hex).")
+
+    return key
 
 
 def encrypt(plaintext: bytes) -> bytes:
-    return AESGCM(_key()).encrypt(_NONCE, plaintext, None)
+    """Enkripsi dengan nonce acak yang baru."""
+    nonce = secrets.token_bytes(NONCE_SIZE)
+    ciphertext = AESGCM(_key()).encrypt(nonce, plaintext, None)
+
+    # Format file: nonce (12 byte) + ciphertext + tag autentikasi.
+    return nonce + ciphertext
 
 
-def decrypt(ciphertext: bytes) -> bytes:
-    return AESGCM(_key()).decrypt(_NONCE, ciphertext, None)
+def decrypt(data: bytes) -> bytes:
+    """Baca nonce dari file lalu dekripsi."""
+    if len(data) < NONCE_SIZE + 16:
+        raise ValueError("Berkas terlalu pendek atau tidak valid.")
+
+    nonce = data[:NONCE_SIZE]
+    ciphertext = data[NONCE_SIZE:]
+
+    return AESGCM(_key()).decrypt(nonce, ciphertext, None)
 
 
 def main(argv: list[str]) -> int:
+    if len(argv) == 4 and argv[1] == "encrypt":
+        with open(argv[2], "rb") as f:
+            plaintext = f.read()
+
+        try:
+            encrypted = encrypt(plaintext)
+        except Exception as err:
+            print(f"Encryption failed: {err}")
+            return 1
+
+        with open(argv[3], "wb") as f:
+            f.write(encrypted)
+
+        print(f"Encrypted {len(plaintext)} bytes -> {argv[3]}")
+        return 0
+
     if len(argv) == 3 and argv[1] == "decrypt":
         with open(argv[2], "rb") as f:
             data = f.read()
+
         try:
-            pt = decrypt(data)
-            print(pt.decode("utf-8", errors="replace"))
+            plaintext = decrypt(data)
+            print(plaintext.decode("utf-8", errors="replace"))
             return 0
-        except Exception as err:
-            print(f"Decryption failed: {err}")
+        except Exception:
+            print("Decryption failed: invalid key or modified file")
             return 1
-    elif len(argv) == 3 and argv[1] == "encrypt":
-        with open(argv[2], "rb") as f:
-            data = f.read()
-        ct = encrypt(data)
-        sys.stdout.buffer.write(ct)
-        return 0
-    elif len(argv) == 4 and argv[1] == "encrypt":
-        with open(argv[2], "rb") as f:
-            data = f.read()
-        ct = encrypt(data)
-        with open(argv[3], "wb") as f:
-            f.write(ct)
-        print(f"Encrypted {len(data)} bytes -> {argv[3]}")
-        return 0
-    print("Symmetric Station — Warehouse Daily Report Encryptor")
+
+    print("Symmetric Station — AES-GCM File Encryptor")
     print("Usage:")
-    print("  python3 daily_report.py decrypt report_monday.enc")
-    print("  python3 daily_report.py decrypt report_tuesday.enc")
-    print("  python3 daily_report.py encrypt <input_file> <output_file>")
-    print("  python3 daily_report.py encrypt <input_file> > <output_file>")
-    return 0
+    print("  python daily_report.py encrypt <input_file> <output_file>")
+    print("  python daily_report.py decrypt <input_file.enc>")
+    return 1
 
 
 if __name__ == "__main__":

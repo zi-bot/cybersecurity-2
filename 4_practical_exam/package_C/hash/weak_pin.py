@@ -7,34 +7,66 @@ Provided by the instructor. pin_dump.csv lists the users and their PIN hashes (d
 from __future__ import annotations
 
 import hashlib
+import hmac
+import secrets
 import sys
 
 
 def store_pin(pin: str) -> str:
-    return hashlib.sha1(pin.encode()).hexdigest()
+    salt = secrets.token_bytes(16)
+
+    hashed = hashlib.pbkdf2_hmac(
+        "sha256",
+        pin.encode(),
+        salt,
+        600000
+    )
+
+    return salt.hex() + "$" + hashed.hex()
 
 
 def check_pin(pin: str, stored: str) -> bool:
-    return store_pin(pin) == stored
+    salt_hex, hash_hex = stored.split("$")
+    salt = bytes.fromhex(salt_hex)
+
+    hashed = hashlib.pbkdf2_hmac(
+        "sha256",
+        pin.encode(),
+        salt,
+        600000
+    )
+
+    return hmac.compare_digest(hashed.hex(), hash_hex)
 
 
-def main(argv: list[str]) -> int:
-    if len(argv) == 2 and argv[1].isdigit():
-        pin = argv[1]
-        print(f"PIN: {pin} -> SHA-1 Hash: {store_pin(pin)}")
+def main(argv):
+    if len(argv) == 2 and argv[1] == "--demo":
+        pin = "1234"
+
+        account_a = store_pin(pin)
+        account_b = store_pin(pin)
+
+        print("Hash akun A:", account_a)
+        print("Hash akun B:", account_b)
+        print("Hash berbeda:", account_a != account_b)
+        print("PIN benar:", check_pin(pin, account_a))
+        print("PIN salah:", check_pin("9999", account_a))
         return 0
-    if len(argv) == 3 and argv[1].isdigit():
-        pin, expected = argv[1], argv[2]
-        match = check_pin(pin, expected)
-        print(f"PIN: {pin} vs Hash: {expected} -> Match: {match}")
-        return 0 if match else 1
-    print("Hash Station — Cashier PIN Storage (Unsalted SHA-1)")
+
+    if (
+        len(argv) == 2
+        and len(argv[1]) == 4
+        and argv[1].isascii()
+        and argv[1].isdigit()
+    ):
+        print(store_pin(argv[1]))
+        return 0
+
+    print("Hash Station — PBKDF2 with Salt")
     print("Usage:")
-    print("  python3 weak_pin.py <4-digit-pin>")
-    print("  python3 weak_pin.py <4-digit-pin> <expected_hash>")
-    print("Example:")
-    print("  python3 weak_pin.py 1234")
-    return 0
+    print("  python weak_pin.py <4-digit-pin>")
+    print("  python weak_pin.py --demo")
+    return 1
 
 
 if __name__ == "__main__":
