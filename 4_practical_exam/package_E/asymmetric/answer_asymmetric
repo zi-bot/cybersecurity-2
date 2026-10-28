@@ -1,0 +1,14 @@
+Station Answer: asymmetric
+
+1. Finding
+Weakness: Bare RSA (RSA tanpa padding) bersifat deterministik sehingga ciphertext untuk plaintext yang sama selalu identik. Karena hanya ada tiga kemungkinan status (PROCESSING, PENDING, SHIPPED), ciphertext dapat dipetakan kembali menggunakan public key tanpa membutuhkan private key.
+Location: send_status.py (fungsi encrypt_status).
+
+3. Fix
+Gunakan RSA-OAEP (RSA dengan padding acak) atau hybrid encryption (AES-GCM + RSA-OAEP) sehingga ciphertext menjadi acak setiap kali enkripsi dilakukan dan tidak dapat dipetakan menggunakan dictionary attack.
+Verification Proof:
+Ciphertext untuk plaintext yang sama berubah pada setiap proses enkripsi.
+Teknik pemetaan ciphertext → plaintext seperti pada bagian Evidence tidak lagi dapat digunakan untuk memulihkan status.
+
+4. Explanation
+Bare RSA tidak aman digunakan pada sistem produksi karena menghasilkan ciphertext yang selalu sama untuk plaintext yang sama. Jika ruang kemungkinan plaintext kecil, seperti status pesanan, penyerang cukup mengenkripsi seluruh kemungkinan menggunakan public key lalu mencocokkannya dengan ciphertext yang diperoleh sehingga informasi dapat dipulihkan tanpa private key. Menggunakan RSA-OAEP atau skema hybrid dengan AES-GCM memberikan padding acak sehingga ciphertext berbeda setiap kali enkripsi dilakukan, membuat serangan dictionary dan pencocokan ciphertext tidak lagi efektif.

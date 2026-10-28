@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 _PART_1 = bytes.fromhex("88a056649e277025530c54af9275592ac0feebc24d83a14891e2493bada0bde7")
 _PART_2 = bytes.fromhex("23e16859eb5add0eb63eedb89187a0ca31476bcb9085f37baa92478bdadf136c")
-_NONCE = bytes.fromhex("e2c0c2bc90f66a3fbdd18a81")
+import os
 
 
 def _key() -> bytes:
@@ -19,12 +19,15 @@ def _key() -> bytes:
 
 
 def encrypt(plaintext: bytes) -> bytes:
-    return AESGCM(_key()).encrypt(_NONCE, plaintext, None)
+    nonce = os.urandom(12)
+    ciphertext = AESGCM(_key()).encrypt(nonce, plaintext, None)
+    return nonce + ciphertext
 
 
-def decrypt(ciphertext: bytes) -> bytes:
-    return AESGCM(_key()).decrypt(_NONCE, ciphertext, None)
-
+def decrypt(data: bytes) -> bytes:
+    nonce = data[:12]
+    ciphertext = data[12:]
+    return AESGCM(_key()).decrypt(nonce, ciphertext, None)
 
 def main(argv: list[str]) -> int:
     if len(argv) == 3 and argv[1] == "decrypt":
