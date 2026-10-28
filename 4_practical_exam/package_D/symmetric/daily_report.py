@@ -6,12 +6,12 @@ Provided by the instructor. Find its weakness, prove it, then fix it.
 
 from __future__ import annotations
 
+import os
 import sys
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 _PART_1 = bytes.fromhex("152bc03d7c65cf8e3496d7be4cab15c93ed4b3197c90566885f16daa90c44377")
 _PART_2 = bytes.fromhex("00e4c2dbf6f43f71fd96de65af4b89d2080542f37c9eba2fcb9c00d6ec26119d")
-_NONCE = bytes.fromhex("cb28d8e8294cf9094defc004")
 
 
 def _key() -> bytes:
@@ -19,11 +19,19 @@ def _key() -> bytes:
 
 
 def encrypt(plaintext: bytes) -> bytes:
-    return AESGCM(_key()).encrypt(_NONCE, plaintext, None)
+    #Encrypts the given plaintext using AES-GCM with a random nonce.
+    nonce = os.urandom(12)
+    ciphertext = AESGCM(_key()).encrypt(nonce, plaintext, None)
+    return nonce + ciphertext
 
 
-def decrypt(ciphertext: bytes) -> bytes:
-    return AESGCM(_key()).decrypt(_NONCE, ciphertext, None)
+def decrypt(data: bytes) -> bytes:
+    if len(data) < 12 + 16:  # Minimum length: 12-byte nonce + 16-byte Auth Tag
+        raise ValueError("Data terlalu pendek/rusak.")
+
+    nonce = data[:12]
+    ciphertext = data[12:]
+    return AESGCM(_key()).decrypt(nonce, ciphertext, None)
 
 
 def main(argv: list[str]) -> int:
@@ -51,12 +59,13 @@ def main(argv: list[str]) -> int:
             f.write(ct)
         print(f"Encrypted {len(data)} bytes -> {argv[3]}")
         return 0
+
     print("Symmetric Station — Warehouse Daily Report Encryptor")
     print("Usage:")
-    print("  python3 daily_report.py decrypt report_monday.enc")
-    print("  python3 daily_report.py decrypt report_tuesday.enc")
-    print("  python3 daily_report.py encrypt <input_file> <output_file>")
-    print("  python3 daily_report.py encrypt <input_file> > <output_file>")
+    print("  python daily_report.py decrypt report_monday.enc")
+    print("  python daily_report.py decrypt report_tuesday.enc")
+    print("  python daily_report.py encrypt <input_file> <output_file>")
+    print("  python daily_report.py encrypt <input_file> > <output_file>")
     return 0
 
 

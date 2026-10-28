@@ -21,11 +21,22 @@ with open(os.path.join(_DIR, "public_key.pem"), "rb") as _f:
 
 
 def encrypt_status(status: bytes) -> bytes:
-    """'Bare' RSA: c = m^e mod n."""
-    k = (_PUB.n.bit_length() + 7) // 8
-    m = int.from_bytes(status.rjust(k, b"\x00"), "big")
-    return pow(m, _PUB.e, _PUB.n).to_bytes(k, "big")
+    """Modern Rsa oaep encryption of a status. The ciphertext is returned as bytes."""
+    from cryptography.hazmat.primitives.asymmetric import padding
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.asymmetric import rsa
 
+    public_key = rsa.RSAPublicNumbers(_PUB.e, _PUB.n).public_key(default_backend())
+    ciphertext = public_key.encrypt(
+        status,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None,
+        ),
+    )
+    return ciphertext
 
 def main(argv: list[str]) -> int:
     if len(argv) == 2 and argv[1].encode() in VALID_STATUSES:
@@ -34,7 +45,7 @@ def main(argv: list[str]) -> int:
         print(f"Status: {argv[1]}")
         print(f"Ciphertext (hex):\n{ct.hex()}")
         return 0
-    print("Asymmetric Station — Order Status Sender (Bare RSA)")
+    print("Asymmetric Station — Order Status Sender (RSA-OAEP)")
     print(f"Valid statuses: {[s.decode() for s in VALID_STATUSES]}")
     print("Usage:")
     print("  python3 send_status.py <STATUS>")

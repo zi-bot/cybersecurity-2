@@ -28,17 +28,28 @@ import os
 
 def caesar_encrypt(text: str, shift: int) -> str:
     """TODO C1: shift every letter by `shift` (mod 26)."""
-    raise NotImplementedError("C1: caesar_encrypt")
+    result = []
+    for char in text:
+        if 'a' <= char <= 'z':
+            result.append(chr((ord(char) - ord('a') + shift) % 26 + ord('a')))
+        elif 'A' <= char <= 'Z':
+            result.append(chr((ord(char) - ord('A') + shift) % 26 + ord('A')))
+        else:
+            result.append(char)
+    return "".join(result)
 
 
 def caesar_decrypt(text: str, shift: int) -> str:
     """TODO C1: the inverse of caesar_encrypt."""
-    raise NotImplementedError("C1: caesar_decrypt")
+    return caesar_encrypt(text, -shift)
 
 
 def brute_force(ciphertext: str) -> list[tuple[int, str]]:
     """TODO C2: [(1, decrypted_with_shift_1), ..., (25, decrypted_with_shift_25)]."""
-    raise NotImplementedError("C2: brute_force")
+    candidates = []
+    for s in range(1, 26):
+        candidates.append((s, caesar_decrypt(ciphertext, s)))
+    return candidates
 
 
 def main() -> int:
