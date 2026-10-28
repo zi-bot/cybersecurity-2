@@ -29,12 +29,27 @@ ITERATIONS = 600_000
 
 def make_hash(password: str, iterations: int = ITERATIONS) -> str:
     """TODO H1: build the stored string with a fresh random salt."""
-    raise NotImplementedError("H1: make_hash")
+    salt = os.urandom(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
+    return f"pbkdf2_sha256${iterations}${base64.b64encode(salt).decode('ascii')}${base64.b64encode(digest).decode('ascii')}"
 
 
 def check(password: str, stored: str) -> bool:
     """TODO H1: parse the string, recompute with the stored salt/iterations, compare in constant time."""
-    raise NotImplementedError("H1: check")
+    try:
+        algorithm, iterations_raw, salt_raw, digest_raw = stored.split("$")
+        if algorithm != "pbkdf2_sha256":
+            raise ValueError("unsupported algorithm")
+        iterations = int(iterations_raw)
+        if iterations <= 0 or iterations > 10_000_000:
+            raise ValueError("invalid iteration count")
+        salt = base64.b64decode(salt_raw, validate=True)
+        expected = base64.b64decode(digest_raw, validate=True)
+    except (TypeError, ValueError):
+        raise ValueError("malformed password hash")
+
+    computed = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
+    return hmac.compare_digest(computed, expected)
 
 
 def main() -> int:

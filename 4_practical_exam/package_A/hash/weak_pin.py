@@ -1,41 +1,50 @@
-#!/usr/bin/env python3
-"""
-PRACTICAL EXAM — Hash station. 4-digit PIN storage in a legacy cashier application.
-Provided by the instructor. pin_dump.csv lists the users and their PIN hashes (dummy data).
-"""
-
-from __future__ import annotations
 
 import hashlib
-import sys
+import secrets
+import hmac
+
+ITERATIONS = 600_000
 
 
 def store_pin(pin: str) -> str:
-    return hashlib.sha1(pin.encode()).hexdigest()
+    salt = secrets.token_bytes(16)
+
+    pin_hash = hashlib.pbkdf2_hmac(
+        "sha256",
+        pin.encode(),
+        salt,
+        ITERATIONS
+    )
+
+    return f"{salt.hex()}:{pin_hash.hex()}"
 
 
 def check_pin(pin: str, stored: str) -> bool:
-    return store_pin(pin) == stored
+    try:
+        salt_hex, expected_hash = stored.split(":")
+        salt = bytes.fromhex(salt_hex)
 
+        actual_hash = hashlib.pbkdf2_hmac(
+            "sha256",
+            pin.encode(),
+            salt,
+            ITERATIONS
+        )
 
-def main(argv: list[str]) -> int:
-    if len(argv) == 2 and argv[1].isdigit():
-        pin = argv[1]
-        print(f"PIN: {pin} -> SHA-1 Hash: {store_pin(pin)}")
-        return 0
-    if len(argv) == 3 and argv[1].isdigit():
-        pin, expected = argv[1], argv[2]
-        match = check_pin(pin, expected)
-        print(f"PIN: {pin} vs Hash: {expected} -> Match: {match}")
-        return 0 if match else 1
-    print("Hash Station — Cashier PIN Storage (Unsalted SHA-1)")
-    print("Usage:")
-    print("  python3 weak_pin.py <4-digit-pin>")
-    print("  python3 weak_pin.py <4-digit-pin> <expected_hash>")
-    print("Example:")
-    print("  python3 weak_pin.py 1234")
-    return 0
+        return hmac.compare_digest(
+            actual_hash.hex(),
+            expected_hash
+        )
+    except (ValueError, TypeError):
+        return False
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv))
+    pin = input("Masukkan PIN 4 digit: ")
+
+    if len(pin) != 4 or not pin.isdigit():
+        print("PIN harus terdiri dari 4 digit.")
+    else:
+        stored = store_pin(pin)
+        print("Data PIN tersimpan:", stored)
+        print("Verifikasi:", check_pin(pin, stored))

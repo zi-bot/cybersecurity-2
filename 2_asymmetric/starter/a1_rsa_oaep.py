@@ -16,17 +16,31 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa  # noqa: F401
 
 def generate_key():
     """TODO A1: an RSA private key, 2048 bits, public exponent 65537."""
-    raise NotImplementedError("A1: generate_key")
+    return rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
 
 def encrypt_oaep(pub, message: bytes) -> bytes:
     """TODO A1: encrypt with padding.OAEP(...)."""
-    raise NotImplementedError("A1: encrypt_oaep")
+    return pub.encrypt(
+        message,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None,
+        ),
+    )
 
 
 def decrypt_oaep(priv, ciphertext: bytes) -> bytes:
     """TODO A1: decrypt with the same OAEP."""
-    raise NotImplementedError("A1: decrypt_oaep")
+    return priv.decrypt(
+        ciphertext,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None,
+        ),
+    )
 
 
 def main() -> int:

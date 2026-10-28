@@ -26,12 +26,46 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM  # noqa: F401
 
 def hybrid_encrypt(data: bytes, pub) -> bytes:
     """TODO A3: build the package in the format above."""
-    raise NotImplementedError("A3: hybrid_encrypt")
+    aes_key = AESGCM.generate_key(bit_length=256)
+    nonce = os.urandom(12)
+    ciphertext = AESGCM(aes_key).encrypt(nonce, data, None)
+    wrapped_key = pub.encrypt(
+        aes_key,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None,
+        ),
+    )
+    return len(wrapped_key).to_bytes(2, byteorder="big") + wrapped_key + nonce + ciphertext
 
 
 def hybrid_decrypt(package: bytes, priv) -> bytes:
     """TODO A3: parse the package, checking lengths BEFORE slicing."""
-    raise NotImplementedError("A3: hybrid_decrypt")
+    if len(package) < 2:
+        raise ValueError("truncated package")
+
+    wrapped_len = int.from_bytes(package[:2], byteorder="big")
+    if wrapped_len <= 0 or wrapped_len != 256:
+        raise ValueError("invalid wrapped key length")
+
+    offset = 2 + wrapped_len
+    if len(package) < offset + 12 + 16:
+        raise ValueError("truncated package")
+
+    wrapped_key = package[2:offset]
+    nonce = package[offset:offset + 12]
+    ciphertext = package[offset + 12:]
+
+    aes_key = priv.decrypt(
+        wrapped_key,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None,
+        ),
+    )
+    return AESGCM(aes_key).decrypt(nonce, ciphertext, None)
 
 
 def main() -> int:

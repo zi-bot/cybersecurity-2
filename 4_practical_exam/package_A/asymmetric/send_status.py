@@ -12,19 +12,26 @@ import pathlib
 import sys
 
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding
 
 VALID_STATUSES = (b"PROCESSING", b"PENDING", b"SHIPPED")
 _DIR = os.path.dirname(os.path.abspath(__file__))
 
 with open(os.path.join(_DIR, "public_key.pem"), "rb") as _f:
-    _PUB = serialization.load_pem_public_key(_f.read()).public_numbers()
+    _PUB_KEY = serialization.load_pem_public_key(_f.read())
 
 
 def encrypt_status(status: bytes) -> bytes:
-    """'Bare' RSA: c = m^e mod n."""
-    k = (_PUB.n.bit_length() + 7) // 8
-    m = int.from_bytes(status.rjust(k, b"\x00"), "big")
-    return pow(m, _PUB.e, _PUB.n).to_bytes(k, "big")
+    """RSA Encryption menggunakan OAEP padding (Probabilistic Encryption)."""
+    return _PUB_KEY.encrypt(
+        status,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None,
+        ),
+    )
 
 
 def main(argv: list[str]) -> int:

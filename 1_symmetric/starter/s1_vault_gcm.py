@@ -29,38 +29,67 @@ TAG_SIZE = 16
 
 def create_key() -> bytes:
     """TODO S1: a random AES-256 key (32 bytes). Hint: AESGCM.generate_key."""
-    raise NotImplementedError("S1: create_key")
+    return AESGCM.generate_key(bit_length=256)
 
 
 def save_key(key: bytes, path: str) -> None:
     """TODO S1: write the key to `path` with permissions 0600 (os.open with a mode)."""
-    raise NotImplementedError("S1: save_key")
+    directory = os.path.dirname(path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "wb") as handle:
+        handle.write(key)
+    os.chmod(path, 0o600)
 
 
 def load_key(path: str) -> bytes:
     """TODO S1: read the key; reject (ValueError) if its length is not 32 bytes."""
-    raise NotImplementedError("S1: load_key")
+    with open(path, "rb") as handle:
+        key = handle.read()
+    if len(key) != 32:
+        raise ValueError("Key must be 32 bytes")
+    return key
 
 
 def encrypt_data(key: bytes, data: bytes) -> bytes:
     """TODO S1: a NEW random 12-byte nonce for every message; return nonce + ct."""
-    raise NotImplementedError("S1: encrypt_data")
+    nonce = os.urandom(NONCE_SIZE)
+    return nonce + AESGCM(key).encrypt(nonce, data, None)
 
 
 def decrypt_data(key: bytes, package: bytes) -> bytes:
     """TODO S1/S2: split nonce and ct; ValueError if the package is < 28 bytes;
     let InvalidTag surface if the data was changed or the key is wrong."""
-    raise NotImplementedError("S2: decrypt_data")
+    if len(package) < 28:
+        raise ValueError("Package too short")
+    nonce = package[:NONCE_SIZE]
+    ciphertext = package[NONCE_SIZE:]
+    return AESGCM(key).decrypt(nonce, ciphertext, None)
 
 
 def encrypt_file(key: bytes, src: str, dst: str) -> None:
     """TODO S1: read `src`, write the encrypted result to `dst`."""
-    raise NotImplementedError("S1: encrypt_file")
+    with open(src, "rb") as source:
+        data = source.read()
+    encrypted = encrypt_data(key, data)
+    directory = os.path.dirname(dst)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    with open(dst, "wb") as target:
+        target.write(encrypted)
 
 
 def decrypt_file(key: bytes, src: str, dst: str) -> None:
     """TODO S1: write `dst` ONLY if decryption succeeds."""
-    raise NotImplementedError("S1: decrypt_file")
+    with open(src, "rb") as source:
+        package = source.read()
+    plaintext = decrypt_data(key, package)
+    directory = os.path.dirname(dst)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    with open(dst, "wb") as target:
+        target.write(plaintext)
 
 
 def main() -> int:

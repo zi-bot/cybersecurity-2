@@ -6,24 +6,30 @@ Provided by the instructor. Find its weakness, prove it, then fix it.
 
 from __future__ import annotations
 
+import os
 import sys
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 _PART_1 = bytes.fromhex("3c562effed422a2a4ee85ce43ffe86f6c69edd703ee75f1b6b8ea96a18c77f53")
 _PART_2 = bytes.fromhex("0c385ea049abef08e9b96d4d28a981777588a9aed42d6cc572e973e21e18a5d2")
-_NONCE = bytes.fromhex("61b1a51300c5ca279213eda5")
-
 
 def _key() -> bytes:
     return bytes(a ^ b for a, b in zip(_PART_1, _PART_2))
 
 
 def encrypt(plaintext: bytes) -> bytes:
-    return AESGCM(_key()).encrypt(_NONCE, plaintext, None)
+    nonce = os.urandom(12)
+    ciphertext = AESGCM(_key()).encrypt(nonce, plaintext, None)
+    return nonce + ciphertext
 
 
-def decrypt(ciphertext: bytes) -> bytes:
-    return AESGCM(_key()).decrypt(_NONCE, ciphertext, None)
+def decrypt(data: bytes) -> bytes:
+    if len(data) < 28:
+        raise ValueError("Data terenkripsi terlalu pendek")
+
+    nonce = data[:12]
+    ciphertext = data[12:]
+    return AESGCM(_key()).decrypt(nonce, ciphertext, None)
 
 
 def main(argv: list[str]) -> int:

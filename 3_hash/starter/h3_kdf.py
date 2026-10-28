@@ -16,7 +16,11 @@ import time  # noqa: F401
 def time_per_guess(hash_function, count: int = 20) -> float:
     """TODO H3: the average seconds to call hash_function('guess<i>') `count` times
     (time.perf_counter)."""
-    raise NotImplementedError("H3: time_per_guess")
+    start = time.perf_counter()
+    for i in range(count):
+        hash_function(f"guess{i}")
+    elapsed = time.perf_counter() - start
+    return elapsed / count
 
 
 if __name__ == "__main__":

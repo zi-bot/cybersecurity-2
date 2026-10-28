@@ -22,35 +22,60 @@ Expected output once finished (python3 1_symmetric/starter/c1_caesar.py):
 """
 
 from __future__ import annotations
-
 import os
 
 
-def caesar_encrypt(text: str, shift: int) -> str:
-    """TODO C1: shift every letter by `shift` (mod 26)."""
-    raise NotImplementedError("C1: caesar_encrypt")
+def caesar_encrypt(text: str = "RAHASIA", shift: int = 3) -> str:
+    """Enkripsi huruf menggunakan Caesar Cipher."""
+    shift %= 26
+    result = ""
+
+    for char in text:
+        if 'A' <= char <= 'Z':
+            result += chr((ord(char) - ord('A') + shift) % 26 + ord('A'))
+        elif 'a' <= char <= 'z':
+            result += chr((ord(char) - ord('a') + shift) % 26 + ord('a'))
+        else:
+            result += char
+
+    return result
 
 
 def caesar_decrypt(text: str, shift: int) -> str:
-    """TODO C1: the inverse of caesar_encrypt."""
-    raise NotImplementedError("C1: caesar_decrypt")
+    """Dekripsi dengan membalik pergeseran."""
+    return caesar_encrypt(text, -shift)
 
 
 def brute_force(ciphertext: str) -> list[tuple[int, str]]:
-    """TODO C2: [(1, decrypted_with_shift_1), ..., (25, decrypted_with_shift_25)]."""
-    raise NotImplementedError("C2: brute_force")
+    """Mencoba seluruh kunci dari 1 sampai 25."""
+    return [
+        (shift, caesar_decrypt(ciphertext, shift))
+        for shift in range(1, 26)
+    ]
 
 
 def main() -> int:
     sample = "Order-0000042: SHIPPED to Bekasi Warehouse!"
-    print("round-trip:", caesar_decrypt(caesar_encrypt(sample, 7), 7) == sample)
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "artifacts", "caesar_message.txt")
+
+    print(
+        "round-trip:",
+        caesar_decrypt(caesar_encrypt(sample, 7), 7) == sample
+    )
+
+    path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "..", "artifacts", "caesar_message.txt"
+    )
+
     with open(path, encoding="utf-8") as f:
         ciphertext = f.read()
+
     candidates = brute_force(ciphertext)
     print("keyspace:", len(candidates))
+
     for shift, text in candidates:
         print(f"  shift {shift:2d}: {text}")
+
     return 0
 
 
